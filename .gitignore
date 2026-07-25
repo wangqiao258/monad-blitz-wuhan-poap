@@ -1,0 +1,13 @@
+# 编译器/依赖体积大，不入库
+soljson.js
+
+# 测试用的本地图片/截图
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.webp
+
+# 系统文件
+Thumbs.db
+.DS_Store

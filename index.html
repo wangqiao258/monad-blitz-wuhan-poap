@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Monad Blitz Wuhan 2026 - POAP</title>
+<script src="./ethers.umd.min.js"></script>
+<style>
+:root {
+  --purple: #836EF9;
+  --purple-hover: #9A87FF;
+  --purple-dim: rgba(131, 110, 249, 0.15);
+  --purple-fade: rgba(131, 110, 249, 0.3);
+  --blue-deep: #200052;
+  --black-deep: #0E100F;
+  --off-white: #FBFAF9;
+  --gray-mid: #A0A0B8;
+  --gray-dim: #6B6B80;
+  --gray-dark: #3A3A4A;
+  --gray-card: #1E1E3A;
+  --success: #3FB950;
+  --error: #F85149;
+  --warning: #D29922;
+  --font: 'Inter', -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+  --radius-card: 20px;
+  --radius-btn: 12px;
+  --radius-pill: 999px;
+  --shadow-glow: 0 8px 40px rgba(131, 110, 249, 0.15);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: var(--font);
+  background: linear-gradient(135deg, var(--blue-deep), var(--black-deep));
+  color: var(--off-white);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+header {
+  width: 100%;
+  max-width: 640px;
+  padding: 24px 20px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.logo-mark {
+  width: 28px;
+  height: 28px;
+  background: var(--purple);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--off-white);
+}
+.badge {
+  font-size: 12px;
+  color: var(--gray-mid);
+  background: rgba(160, 160, 184, 0.1);
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(160, 160, 184, 0.15);
+}
+main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 20px 40px;
+  width: 100%;
+  max-width: 640px;
+}
+.card {
+  width: 100%;
+  background: rgba(30, 30, 58, 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(131, 110, 249, 0.15);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-glow);
+  padding: 40px 32px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+.certificate-preview {
+  width: 200px;
+  height: 200px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(131, 110, 249, 0.2);
+  background: var(--black-deep);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.certificate-preview svg,
+.certificate-preview img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.certificate-preview .placeholder {
+  text-align: center;
+  color: var(--gray-dim);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.event-title {
+  text-align: center;
+}
+.event-title h1 {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 4px;
+}
+.event-title p {
+  font-size: 15px;
+  color: var(--gray-mid);
+}
+.cert-token-id {
+  margin-top: 8px;
+  display: inline-block;
+  font-family: monospace;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--purple);
+  background: var(--purple-dim);
+  padding: 4px 14px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--purple-fade);
+}
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 16px;
+  border-radius: var(--radius-pill);
+}
+.status-badge.open {
+  background: rgba(63, 185, 80, 0.12);
+  color: var(--success);
+  border: 1px solid rgba(63, 185, 80, 0.25);
+}
+.status-badge.closed {
+  background: rgba(248, 81, 73, 0.12);
+  color: var(--error);
+  border: 1px solid rgba(248, 81, 73, 0.25);
+}
+.status-badge.pending {
+  background: rgba(210, 153, 34, 0.12);
+  color: var(--warning);
+  border: 1px solid rgba(210, 153, 34, 0.25);
+}
+.status-badge .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.status-badge.open .dot { animation: pulse 1.5s ease-in-out infinite; }
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.wallet-section {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.wallet-address {
+  font-family: monospace;
+  font-size: 14px;
+  color: var(--gray-mid);
+  background: rgba(160, 160, 184, 0.08);
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(160, 160, 184, 0.1);
+}
+.network-warning {
+  font-size: 13px;
+  color: var(--warning);
+  text-align: center;
+  line-height: 1.5;
+}
+.network-warning button {
+  background: none;
+  border: none;
+  color: var(--purple);
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 13px;
+  text-decoration: underline;
+}
+.upload-section {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.upload-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border: 1px dashed var(--gray-dim);
+  border-radius: var(--radius-btn);
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--gray-mid);
+  transition: all 0.2s;
+}
+.upload-label:hover {
+  border-color: var(--purple);
+  color: var(--purple);
+  background: var(--purple-dim);
+}
+.upload-label input { display: none; }
+.upload-hint {
+  font-size: 12px;
+  color: var(--gray-dim);
+  text-align: center;
+}
+.upload-preview {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--purple);
+}
+.btn {
+  width: 100%;
+  padding: 14px 28px;
+  border: none;
+  border-radius: var(--radius-btn);
+  font-family: var(--font);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.btn-primary {
+  background: var(--purple);
+  color: var(--off-white);
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--purple-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(131, 110, 249, 0.3);
+}
+.btn-primary:disabled {
+  background: var(--gray-dark);
+  color: var(--gray-dim);
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+.btn-secondary {
+  background: transparent;
+  color: var(--purple);
+  border: 1px solid var(--purple);
+}
+.btn-secondary:hover {
+  background: var(--purple-dim);
+}
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,0.2);
+  border-top-color: var(--off-white);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.result-box {
+  width: 100%;
+  padding: 16px;
+  border-radius: var(--radius-btn);
+  font-size: 14px;
+  text-align: center;
+  line-height: 1.5;
+}
+.result-box.success {
+  background: rgba(63, 185, 80, 0.1);
+  color: var(--success);
+  border: 1px solid rgba(63, 185, 80, 0.2);
+}
+.result-box.error {
+  background: rgba(248, 81, 73, 0.1);
+  color: var(--error);
+  border: 1px solid rgba(248, 81, 73, 0.2);
+}
+.result-box .tx-link {
+  color: var(--purple);
+  text-decoration: underline;
+  cursor: pointer;
+  font-weight: 500;
+}
+footer {
+  width: 100%;
+  max-width: 640px;
+  padding: 16px 20px 24px;
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  font-size: 12px;
+  color: var(--gray-dark);
+}
+footer a {
+  color: var(--gray-dim);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+footer a:hover { color: var(--purple); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-mark">M</div>
+    <span>Monad POAP</span>
+  </div>
+  <span class="badge">Testnet 10143</span>
+</header>
+
+<main>
+  <div class="card">
+    <div class="certificate-preview" id="preview">
+      <div class="placeholder" id="placeholder">
+        <div>连接钱包后</div>
+        <div>预览出席证明</div>
+      </div>
+    </div>
+
+    <div class="event-title">
+      <h1>Monad Blitz Wuhan</h1>
+      <p>2026-07-25 · Wuhan</p>
+      <div id="certTokenId" class="cert-token-id" style="display:none"></div>
+    </div>
+
+    <div id="statusBadge" class="status-badge pending">
+      <span class="dot"></span>
+      <span id="statusText">加载中…</span>
+    </div>
+
+    <div class="wallet-section" id="walletSection">
+      <div id="walletInfo"></div>
+      <div id="networkWarning" class="network-warning" style="display:none"></div>
+      <button id="connectBtn" class="btn btn-primary">连接钱包</button>
+    </div>
+
+    <div class="upload-section" id="uploadSection">
+      <label class="upload-label" id="uploadLabel">
+        <span>+</span> 上传你的图片（可选）
+        <input type="file" id="imageInput" accept="image/jpeg,image/png,image/gif,image/webp">
+      </label>
+      <div id="uploadPreviewContainer"></div>
+      <div class="upload-hint">上传后图片将压缩为 400px 嵌入链上证书，回看清晰。支持 JPG/PNG/GIF/WebP</div>
+    </div>
+
+    <button id="actionBtn" class="btn btn-primary" disabled>
+      <span id="actionText">领取出席证明</span>
+    </button>
+
+    <div id="resultBox" class="result-box" style="display:none"></div>
+  </div>
+</main>
+
+<footer>
+  <a href="https://testnet.monadvision.com" target="_blank" rel="noopener">区块浏览器</a>
+  <a href="#" id="footerContract">合约地址</a>
+  <span>Monad Blitz Wuhan 2026</span>
+</footer>
+
+<script>
+// ============== 配置区（部署后修改这里） ==============
+const CONFIG = {
+  contractAddress: "0xd13719fC131c23C49a55b588C2b2fD9c2EDD8Dac",
+  chainId: "0x279f",           // 10143
+  rpcUrl: "https://testnet-rpc.monad.xyz",
+  explorerUrl: "https://testnet.monadvision.com",
+  eventName: "Monad Blitz Wuhan 2026",
+  eventDate: "2026-07-25",
+  eventCity: "Wuhan",
+  chainName: "Monad Testnet",
+  currency: "MON",
+  maxImageBytes: 120000,
+};
+// ====================================================
+
+const $ = id => document.getElementById(id);
+const preview = $('preview');
+const certTokenId = $('certTokenId');
+const statusBadge = $('statusBadge');
+const statusText = $('statusText');
+const walletInfo = $('walletInfo');
+const walletSection = $('walletSection');
+const networkWarning = $('networkWarning');
+const connectBtn = $('connectBtn');
+const uploadSection = $('uploadSection');
+const uploadLabel = $('uploadLabel');
+const imageInput = $('imageInput');
+const uploadPreviewContainer = $('uploadPreviewContainer');
+const actionBtn = $('actionBtn');
+const actionText = $('actionText');
+const resultBox = $('resultBox');
+const footerContract = $('footerContract');
+
+let provider, signer, contract, userAddress;
+let selectedImageBase64 = null;
+let state = 'loading';
+
+footerContract.textContent = CONFIG.contractAddress;
+footerContract.href = CONFIG.explorerUrl + '/address/' + CONFIG.contractAddress;
+
+const ABI = [
+  "function mint() external",
+  "function mintWithImage(string calldata imageDataURI) external",
+  "function isClaimOpen() external view returns (bool)",
+  "function hasClaimed(address) external view returns (bool)",
+  "function claimStart() external view returns (uint256)",
+  "function claimEnd() external view returns (uint256)",
+  "function nextId() external view returns (uint256)",
+  "function totalMinted() external view returns (uint256)",
+  "function tokenURI(uint256) external view returns (string)",
+  "function ownerOf(uint256) external view returns (address)",
+  "function eventName() external view returns (string)",
+  "function eventDate() external view returns (string)",
+  "function eventCity() external view returns (string)",
+  "event Claimed(address indexed attendee, uint256 indexed tokenId, uint256 timestamp, bool customImage)"
+];
+
+function setState(newState, msg) {
+  state = newState;
+  switch (newState) {
+    case 'no_wallet': statusBadge.className = 'status-badge pending'; statusText.textContent = '请安装 MetaMask'; break;
+    case 'wrong_network': statusBadge.className = 'status-badge pending'; statusText.textContent = '请切换网络'; break;
+    case 'open': statusBadge.className = 'status-badge open'; statusText.textContent = msg || '领取开放中'; break;
+    case 'closed': statusBadge.className = 'status-badge closed'; statusText.textContent = msg || '领取已结束'; break;
+    case 'loading': statusBadge.className = 'status-badge pending'; statusText.textContent = msg || '加载中…'; break;
+    case 'claimed': statusBadge.className = 'status-badge closed'; statusText.textContent = msg || '已领取'; break;
+    case 'minting': statusBadge.className = 'status-badge pending'; statusText.textContent = '确认中…'; break;
+    case 'connected': break;
+    default: break;
+  }
+  updateUI();
+}
+
+async function switchNetwork() {
+  try {
+    await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: CONFIG.chainId }] });
+  } catch (e) {
+    if (e.code === 4902) {
+      await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [{
+        chainId: CONFIG.chainId,
+        chainName: CONFIG.chainName,
+        nativeCurrency: { name: CONFIG.currency, symbol: CONFIG.currency, decimals: 18 },
+        rpcUrls: [CONFIG.rpcUrl],
+        blockExplorerUrls: [CONFIG.explorerUrl],
+      }]});
+    }
+  }
+}
+
+async function connectWallet() {
+  if (!window.ethereum) { setState('no_wallet'); return; }
+  try {
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    userAddress = accounts[0];
+
+    // 先确保在 Monad Testnet，避免在无法连接的主网上卡住
+    const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+    if (chainId !== CONFIG.chainId) {
+      await switchNetwork();
+    }
+    const chainAfter = await window.ethereum.request({ method: 'eth_chainId' });
+    if (chainAfter !== CONFIG.chainId) {
+      setState('wrong_network');
+      networkWarning.style.display = 'block';
+      networkWarning.innerHTML = '请切换到 Monad Testnet <button onclick="switchNetwork()">切换网络</button>';
+      updateUI();
+      return;
+    }
+
+    provider = new ethers.BrowserProvider(window.ethereum);
+    signer = await provider.getSigner();
+    contract = new ethers.Contract(CONFIG.contractAddress, ABI, signer);
+    networkWarning.style.display = 'none';
+    await refresh();
+  } catch (e) {
+    console.error(e);
+    setState('wrong_network');
+    networkWarning.style.display = 'block';
+    networkWarning.innerHTML = '请切换到 Monad Testnet <button onclick="switchNetwork()">切换网络</button>';
+    updateUI();
+  }
+}
+
+async function checkNetwork() {
+  if (!window.ethereum) return;
+  const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+  if (chainId !== CONFIG.chainId) {
+    setState('wrong_network');
+    networkWarning.style.display = 'block';
+    networkWarning.innerHTML = '请切换到 Monad Testnet <button onclick="switchNetwork()">切换网络</button>';
+    connectBtn.style.display = userAddress ? 'none' : 'block';
+    return false;
+  }
+  networkWarning.style.display = 'none';
+  return true;
+}
+
+async function refresh() {
+  if (!contract || !userAddress) return;
+  const ok = await checkNetwork();
+  if (!ok) return;
+  try {
+    const [open, claimed, start, end] = await Promise.all([
+      contract.isClaimOpen(),
+      contract.hasClaimed(userAddress),
+      contract.claimStart(),
+      contract.claimEnd(),
+    ]);
+    const now = Math.floor(Date.now() / 1000);
+    if (claimed) {
+      setState('claimed', '你已领取');
+      showResult('success', '你已成功领取出席证明');
+      loadCertificate();
+    } else if (open) {
+      const remaining = Number(end) - now;
+      if (remaining > 0 && remaining < 86400) {
+        const mins = Math.floor(remaining / 60);
+        setState('open', `领取开放中 · 剩余 ${mins} 分钟`);
+      } else {
+        setState('open');
+      }
+    } else if (now < Number(start)) {
+      const wait = Number(start) - now;
+      const mins = Math.floor(wait / 60);
+      setState('closed', `领取未开始 · 还有 ${mins} 分钟`);
+    } else {
+      setState('closed');
+    }
+  } catch (e) {
+    console.error(e);
+    setState('loading', '合约加载中…');
+  }
+}
+
+function updateUI() {
+  const hasWallet = !!userAddress;
+  const isWrong = state === 'wrong_network';
+  const isOpen = state === 'open';
+  const isClaimed = state === 'claimed';
+  const isMinting = state === 'minting';
+  const isConnected = hasWallet && !isWrong;
+
+  connectBtn.style.display = hasWallet ? 'none' : 'block';
+  connectBtn.textContent = '连接钱包';
+
+  if (hasWallet) {
+    const addr = userAddress;
+    walletInfo.innerHTML = `<div class="wallet-address">${addr.slice(0,6)}...${addr.slice(-4)}</div>`;
+  } else {
+    walletInfo.innerHTML = '';
+  }
+
+  uploadSection.style.display = !isClaimed ? 'flex' : 'none';
+
+  actionBtn.style.display = isConnected ? 'flex' : 'none';
+  if (!isConnected) {
+    actionBtn.disabled = true;
+    actionText.textContent = '请先连接钱包';
+  } else if (isWrong) {
+    actionBtn.disabled = true;
+    actionText.textContent = '请切换网络';
+  } else if (isClaimed) {
+    actionBtn.disabled = true;
+    actionText.textContent = '你已领取';
+  } else if (!isOpen && !isMinting) {
+    actionBtn.disabled = true;
+    actionText.textContent = '暂未开放领取';
+  } else if (isMinting) {
+    actionBtn.disabled = true;
+    actionText.innerHTML = '<span class="spinner"></span> 确认中…';
+  } else {
+    actionBtn.disabled = false;
+    actionText.textContent = selectedImageBase64 ? '领取出席证明（含自定义图片）' : '领取出席证明';
+  }
+}
+
+async function doMint() {
+  if (!contract || !userAddress) return;
+  const ok = await checkNetwork();
+  if (!ok) return;
+  setState('minting');
+  try {
+    let tx;
+    if (selectedImageBase64) {
+      tx = await contract.mintWithImage(selectedImageBase64);
+    } else {
+      tx = await contract.mint();
+    }
+    const receipt = await tx.wait();
+    let tokenId = null;
+    try {
+      const t = receipt.logs[0]?.topics?.[2];
+      if (t) tokenId = BigInt(t).toString();
+    } catch (_) {}
+    const idText = tokenId !== null ? `Token #${tokenId}` : '出席证明';
+    showResult('success', `铸造成功！${idText}<br><a class="tx-link" href="${CONFIG.explorerUrl}/tx/${receipt.hash}" target="_blank">查看交易</a>`);
+    setState('claimed', '已领取');
+    if (tokenId !== null) renderCertificate(tokenId);
+    else loadCertificate();
+  } catch (e) {
+    showResult('error', e.reason || e.message || '交易失败');
+    setState('open');
+  }
+}
+
+async function loadCertificate() {
+  if (!contract || !userAddress) return;
+  try {
+    let total = 0;
+    try { total = Number(await contract.nextId()); } catch (_) { total = 0; }
+    const upper = total > 1 ? total : 200;
+    const addr = userAddress.toLowerCase();
+    for (let id = 1; id < upper; id++) {
+      try {
+        const owner = await contract.ownerOf(id);
+        if (owner.toLowerCase() === addr) {
+          renderCertificate(id.toString());
+          return;
+        }
+      } catch (_) {
+        if (total > 1) continue;
+      }
+    }
+  } catch (e) {
+    console.error('loadCertificate failed', e);
+  }
+}
+
+async function renderCertificate(tokenId) {
+  try {
+    const uri = await contract.tokenURI(tokenId);
+    let jsonStr;
+    if (uri.startsWith('data:application/json;base64,')) {
+      jsonStr = atob(uri.split(',')[1]);
+    } else if (uri.startsWith('data:application/json,')) {
+      jsonStr = decodeURIComponent(uri.split(',')[1]);
+    } else {
+      return;
+    }
+    const meta = JSON.parse(jsonStr);
+    if (meta.image) {
+      preview.innerHTML = `<img src="${meta.image}" alt="certificate" style="width:100%;height:100%;object-fit:contain;">`;
+    }
+    certTokenId.textContent = `Token #${tokenId}`;
+    certTokenId.style.display = 'block';
+  } catch (e) {
+    console.error('renderCertificate failed', e);
+  }
+}
+
+function showResult(type, msg) {
+  resultBox.style.display = 'block';
+  resultBox.className = 'result-box ' + type;
+  resultBox.innerHTML = msg;
+}
+
+function hideResult() {
+  resultBox.style.display = 'none';
+}
+
+function compressToLimit(file, limitBytes, cb, errCb) {
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      const dims = [400, 340, 280, 220, 160];
+      const qualities = [0.8, 0.7, 0.6, 0.5, 0.4];
+      let dataUri = null;
+      for (let d = 0; d < dims.length; d++) {
+        const maxW = dims[d];
+        let w = img.width, h = img.height;
+        if (w > maxW) { h = h * maxW / w; w = maxW; }
+        if (h > maxW) { w = w * maxW / h; h = maxW; }
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(w); canvas.height = Math.round(h);
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        for (let q = 0; q < qualities.length; q++) {
+          const candidate = canvas.toDataURL('image/jpeg', qualities[q]);
+          if (new Blob([candidate]).size <= limitBytes) {
+            cb(candidate);
+            return;
+          }
+          dataUri = candidate;
+        }
+      }
+      errCb && errCb();
+    };
+    img.onerror = function() { errCb && errCb(); };
+    img.src = e.target.result;
+  };
+  reader.onerror = function() { errCb && errCb(); };
+  reader.readAsDataURL(file);
+}
+
+imageInput.addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  showResult('success', '正在处理图片…');
+  compressToLimit(file, CONFIG.maxImageBytes, function(dataUri) {
+    selectedImageBase64 = dataUri;
+    uploadPreviewContainer.innerHTML = `<img class="upload-preview" src="${dataUri}" alt="preview">`;
+    uploadLabel.style.display = 'none';
+    preview.innerHTML = `<img src="${dataUri}" alt="certificate photo" style="width:100%;height:100%;object-fit:cover;">`;
+    hideResult();
+    updateUI();
+  }, function() {
+    showResult('error', '图片无法压缩到链上存储上限，请换一张更简单的图片');
+  });
+});
+
+connectBtn.addEventListener('click', connectWallet);
+actionBtn.addEventListener('click', doMint);
+
+window.ethereum?.on('chainChanged', () => setTimeout(refresh, 500));
+window.ethereum?.on('accountsChanged', () => setTimeout(refresh, 500));
+
+(async function init() {
+  if (typeof ethers === 'undefined') {
+    setState('no_wallet', 'ethers.js 未加载');
+    showResult('error', 'ethers.js 库未能加载，请确认 ethers.umd.min.js 与页面在同一目录，并通过 http://localhost:8000 打开');
+    return;
+  }
+  if (window.ethereum) {
+    try {
+      const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+      if (accounts.length > 0) {
+        await connectWallet();
+        return;
+      }
+    } catch (e) {}
+  }
+  setState('no_wallet');
+  updateUI();
+})();
+</script>
+</body>
+</html>
